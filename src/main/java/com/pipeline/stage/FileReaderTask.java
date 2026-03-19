@@ -74,7 +74,7 @@ public class FileReaderTask implements Runnable {
 
                 // Skip blank lines at reader level to reduce queue pressure
                 if (line.trim().isEmpty()) {
-                    metrics.incrementSkippedLines();
+                    metrics.incrementErrorLines();
                     lineNumber++;
                     continue;
                 }
