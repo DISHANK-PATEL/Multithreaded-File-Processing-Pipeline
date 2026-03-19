@@ -9,7 +9,7 @@ import java.util.List;
 
 public class Main {
 
-    private static final String INPUT_FILE_PATH = "pipeline-clean/src/main/resources/input1.txt";
+    private static final String INPUT_FILE_PATH = "pipeline-clean/src/main/resources/input3.txt";
     private static final int[] THREAD_COUNTS = {1, 2, 4, 8};
     private static final int QUEUE_CAPACITY = 8000;
     private static final int PARSER_THREADS = 2;

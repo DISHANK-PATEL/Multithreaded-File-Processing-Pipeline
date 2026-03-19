@@ -99,7 +99,10 @@ public class PipelineManager {
             ));
         }
 
-        Thread.sleep(200);
+        //Thread.sleep(200);
+        long fileSizeBytes = new File(filePath).length();
+        long warmupMs = fileSizeBytes < 10_000_000 ? 50 : 200;  // 50ms for <10MB
+        Thread.sleep(warmupMs);
         metrics.start();
 
         for (int i = 0; i < readerThreadCount; i++) {

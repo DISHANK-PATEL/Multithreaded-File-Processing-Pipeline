@@ -64,8 +64,10 @@ public class ResultAggregator implements Runnable {
             for (String word : record.getWords()) {
                 wordFrequencyMap.merge(word, 1L, Long::sum);
             }
-            String levelKey = "LEVEL_" + record.getLevel().toUpperCase();
-            wordFrequencyMap.merge(levelKey, 1L, Long::sum);
+            String level = record.getLevel().toUpperCase();
+            if (!level.equals("UNKNOWN")) {
+                wordFrequencyMap.merge("LEVEL_" + level, 1L, Long::sum);
+            }
         }
     }
 

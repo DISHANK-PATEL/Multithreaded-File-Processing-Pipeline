@@ -24,8 +24,12 @@ public class DataParserTask implements Runnable {
     private static final Set<String> STOP_WORDS = new HashSet<>(Arrays.asList(
             "a", "an", "the", "is", "it", "in", "on", "at", "to", "for",
             "of", "and", "or", "but", "not", "with", "from", "by", "as",
-            "be", "was", "are", "has", "have", "had", "do", "did", "will",
-            "this", "that", "its", "into", "via", "after", "after", "per"
+            "he", "she", "we", "they", "me", "my", "you", "his", "her",
+            "him", "our", "its", "who", "which", "when", "were", "was",
+            "are", "been", "be", "have", "has", "had", "do", "did", "will",
+            "would", "could", "should", "may", "might", "shall", "can",
+            "there", "their", "them", "then", "than", "so", "if", "up",
+            "out", "about", "what", "your", "all", "one", "said", "no"
     ));
 
     private static final int MIN_WORD_LENGTH = 2;
