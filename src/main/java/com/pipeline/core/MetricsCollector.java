@@ -1,4 +1,5 @@
 package com.pipeline.core;
+
 import java.util.concurrent.atomic.AtomicLong;
 
 public class MetricsCollector {
@@ -6,18 +7,19 @@ public class MetricsCollector {
     private final AtomicLong totalLinesRead   = new AtomicLong(0);
     private final AtomicLong totalLinesParsed = new AtomicLong(0);
     private final AtomicLong errorLines       = new AtomicLong(0);
-    private final AtomicLong skippedLines     = new AtomicLong(0);
+
     private volatile long startTimeNanos;
     private volatile long endTimeNanos;
-    private volatile long seqStreamMs;
-    private volatile long parStreamMs;
+
+    private volatile long seqStreamUs;
+    private volatile long parStreamUs;
+
     public void start() {
         totalLinesRead.set(0);
         totalLinesParsed.set(0);
         errorLines.set(0);
-        skippedLines.set(0);
-        seqStreamMs  = 0;
-        parStreamMs  = 0;
+        seqStreamUs  = 0;
+        parStreamUs  = 0;
         startTimeNanos = System.nanoTime();
     }
 
@@ -26,79 +28,57 @@ public class MetricsCollector {
     }
 
     public void incrementLinesRead()    { totalLinesRead.incrementAndGet(); }
-    public void addLinesRead(long n)    { totalLinesRead.addAndGet(n); }
     public void incrementLinesParsed()  { totalLinesParsed.incrementAndGet(); }
     public void incrementErrorLines()   { errorLines.incrementAndGet(); }
-    public void incrementSkippedLines() { skippedLines.incrementAndGet(); }
-    public void setSeqStreamMs(long ms) { this.seqStreamMs = ms; }
-    public void setParStreamMs(long ms) { this.parStreamMs = ms; }
-    
-    public long getTotalLinesRead()   { return totalLinesRead.get(); }
-    public long getTotalLinesParsed() { return totalLinesParsed.get(); }
-    public long getErrorLines()       { return errorLines.get(); }
-    public long getSkippedLines()     { return skippedLines.get(); }
-    public long getSeqStreamMs()      { return seqStreamMs; }
-    public long getParStreamMs()      { return parStreamMs; }
-    
-    public long getElapsedMs() {
+
+    public void setSeqStreamUs(long us) { this.seqStreamUs = us; }
+    public void setParStreamUs(long us) { this.parStreamUs = us; }
+
+    public long getWallClockMs() {
         if (endTimeNanos == 0) return 0;
         return (endTimeNanos - startTimeNanos) / 1_000_000;
     }
-    
+
     public long getThroughput() {
-        long elapsedMs = getElapsedMs();
-        if (elapsedMs == 0) return 0;
-        return (totalLinesParsed.get() * 1000L) / elapsedMs;
-    }
-    
-    public void printReport(int threadCount) {
-        System.out.println("\n╔══════════════════════════════════════════════╗");
-        System.out.printf( "║   PIPELINE METRICS  [reader threads = %2d]    ║%n", threadCount);
-        System.out.println("╠══════════════════════════════════════════════╣");
-        System.out.printf( "║  Lines Read       : %-25d ║%n", totalLinesRead.get());
-        System.out.printf( "║  Lines Parsed     : %-25d ║%n", totalLinesParsed.get());
-        System.out.printf( "║  Error Lines      : %-25d ║%n", errorLines.get());
-        System.out.printf( "║  Skipped Lines    : %-25d ║%n", skippedLines.get());
-        System.out.println("╠══════════════════════════════════════════════╣");
-        System.out.printf( "║  Elapsed Time     : %-20d ms   ║%n", getElapsedMs());
-        System.out.printf( "║  Throughput       : %-17d lines/s ║%n", getThroughput());
-        System.out.println("╠══════════════════════════════════════════════╣");
-        System.out.printf( "║  Sequential Stream: %-20d ms   ║%n", seqStreamMs);
-        System.out.printf( "║  Parallel Stream  : %-20d ms   ║%n", parStreamMs);
-        
-        if (seqStreamMs > 0 && parStreamMs > 0) {
-            if (parStreamMs < seqStreamMs) {
-                long gain = seqStreamMs - parStreamMs;
-                System.out.printf("║  Parallel faster by %-19d ms   ║%n", gain);
-            } else {
-                long overhead = parStreamMs - seqStreamMs;
-                System.out.printf("║  Sequential faster by %-18d ms   ║%n", overhead);
-            }
-        }
-        System.out.println("╚══════════════════════════════════════════════╝");
-    }
-    
-    public String toTableRow(int threadCount) {
-        return String.format("| %-12d | %-18d | %-20d | %-12d | %-14d |",
-                threadCount, getElapsedMs(), getThroughput(),
-                seqStreamMs, parStreamMs);
-    }
-    
-    public static void printTableHeader() {
-        System.out.println("\n" + "─".repeat(90));
-        System.out.printf("| %-12s | %-18s | %-20s | %-12s | %-14s |%n",
-                "Threads", "Elapsed (ms)", "Throughput (l/s)", "Seq (ms)", "Parallel (ms)");
-        System.out.println("─".repeat(90));
+        long ms = getWallClockMs();
+        return (ms == 0) ? 0 : (totalLinesParsed.get() * 1000L) / ms;
     }
 
-    @Override
-    public String toString() {
-        return String.format(
-                "MetricsCollector{read=%d, parsed=%d, errors=%d, skipped=%d, " +
-                        "elapsed=%dms, seq=%dms, par=%dms}",
-                totalLinesRead.get(), totalLinesParsed.get(),
-                errorLines.get(), skippedLines.get(),
-                getElapsedMs(), seqStreamMs, parStreamMs
-        );
+    public double getParallelOverhead() {
+        if (seqStreamUs == 0) return 0;
+        return (double) parStreamUs / seqStreamUs;
+    }
+
+    public void printReport(int threadCount) {
+        double overhead = getParallelOverhead();
+
+        System.out.println("\n╔══════════════════════════════════════════════════════╗");
+        System.out.printf( "║  PERFORMANCE ANALYSIS [threads: %2d]                 ║%n", threadCount);
+        System.out.println("╠══════════════════════════════════════════════════════╣");
+        System.out.printf( "║  Wall-Clock Time  : %-15d ms (Speed)    ║%n", getWallClockMs());
+        System.out.printf( "║  Throughput       : %-15d l/s           ║%n", getThroughput());
+        System.out.println("╟──────────────────────────────────────────────────────╢");
+        System.out.printf( "║  CPU Effort (Seq) : %-15d µs            ║%n", seqStreamUs);
+        System.out.printf( "║  CPU Effort (Par) : %-15d µs            ║%n", parStreamUs);
+
+        if (overhead > 1.0) {
+            System.out.printf("║  Parallel Tax     : %-15.2fx more effort   ║%n", overhead);
+        } else if (overhead > 0) {
+            System.out.printf("║  Efficiency Gain  : %-15.2fx faster effort ║%n", (1/overhead));
+        }
+        System.out.println("╚══════════════════════════════════════════════════════╝");
+    }
+
+    public static void printTableHeader() {
+        System.out.println("\n" + "─".repeat(105));
+        System.out.printf("| %-8s | %-15s | %-18s | %-12s | %-12s | %-15s |%n",
+                "Threads", "Wall-Clock(ms)", "Throughput(l/s)", "Seq Effort", "Par Effort", "Parallel Tax");
+        System.out.println("─".repeat(105));
+    }
+
+    public String toTableRow(int threadCount) {
+        return String.format("| %-8d | %-15d | %-18d | %-12d | %-12d | %-15.2fx |",
+                threadCount, getWallClockMs(), getThroughput(),
+                seqStreamUs, parStreamUs, getParallelOverhead());
     }
 }
