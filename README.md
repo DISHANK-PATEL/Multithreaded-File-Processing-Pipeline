@@ -1,5 +1,5 @@
 # Multi-Threaded File Processing Pipeline
-
+<img width="1009" height="918" alt="image" src="https://github.com/user-attachments/assets/388034d0-0715-4fea-b65b-7568217eb930" />
 A high-performance Java pipeline that reads large text files using parallel chunk-based I/O, processes data through a three-stage concurrent pipeline, and aggregates word frequencies 
 using thread-safe data structures. 
 
@@ -143,17 +143,93 @@ PipelineManager.run() unblocks
   → metrics.stop()
   → run() returns
 ```
-
 ## Performance Results
 
-
-
-### When parallel stream would win
-
-Parallel stream outperforms sequential when the word frequency map exceeds approximately 50,000 unique entries. This requires a large diverse-vocabulary file (100,000+ lines of novel text or Wikipedia dumps). With a typical log file, the repetitive vocabulary keeps the map small and sequential always wins.
+This evaluation is based on a file of ~1.4 million lines under **I/O-intensive conditions** (minimal CPU computation).
 
 ---
 
+### Observations
+
+- The workload is dominated by disk I/O.
+- Increasing parallelism improves performance only up to a limit.
+- Beyond that limit, performance degrades due to contention and disk inefficiencies.
+
+---
+
+### Experimental Outputs
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/0d258f2d-b702-4d68-a9b0-5311fe7a2e96" width="80%">
+  <img src="https://github.com/user-attachments/assets/a7496589-7249-4c1e-9a69-f5ad529c47c8" width="40%">
+  <img src="https://github.com/user-attachments/assets/a84a8961-5a38-476d-83b3-1f80da47982d" width="40%">
+</p>
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/e2eaacaa-c5bd-43c5-8250-b462d438f7c9" width="80%">
+  <img src="https://github.com/user-attachments/assets/cda7fde7-91ae-429b-8f16-6a8d107d5b81" width="80%">
+  <img src="https://github.com/user-attachments/assets/17bae05f-f385-42d6-a4bf-3c74f74f71d1" width="80%">
+  <img src="https://github.com/user-attachments/assets/66dc53f8-82f9-42fc-a7ef-6a74f9c2ddae" width="80%">
+  <img src="https://github.com/user-attachments/assets/05f773c0-180c-41ad-845a-edc8bdd5fbec" width="80%">
+<img width="1468" height="574" alt="image" src="https://github.com/user-attachments/assets/4ab7ac75-5032-4198-ba23-4e53f7c4d56c" />
+Since file is encrypted the pipeline doesnt start and is caught in pre-flight checks 
+</p>
+
+---
+
+### System Context
+
+- Machine: Mac M4 (10 CPU cores)
+- Storage: NVMe SSD with an effective parallel I/O queue depth of ~4
+
+---
+
+### Parallel vs Sequential
+
+**Parallel streams perform better when:**
+- Word frequency map exceeds ~50,000 unique entries
+- Input data has high vocabulary diversity (e.g., large text corpora)
+
+**Sequential processing performs better when:**
+- Vocabulary is limited (e.g., log files)
+- Word map size is small (hundreds to a few thousand entries)
+- Contention on shared keys is high
+
+---
+
+### Thread Configuration (R)
+
+- **R = 4**
+  - Optimal for the given system
+  - Matches NVMe SSD parallel I/O capability (queue depth ≈ 4)
+  - Provides best throughput
+
+- **R = 8**
+  - Leads to disk thrashing
+  - Increased seek overhead
+  - Reduced effective bandwidth per thread
+
+---
+
+### Contention Analysis
+
+- Small word maps lead to high contention
+- Multiple threads frequently update the same keys
+- `ConcurrentHashMap` introduces bucket-level locking
+- Operations serialize under contention
+
+Result:
+- Synchronization overhead outweighs parallel gains
+
+---
+
+### Conclusion
+
+- Performance depends on input characteristics and hardware limits
+- Increasing threads beyond optimal levels reduces efficiency
+- Parallelism is beneficial only when contention is low and workload justifies it
+
+**Key takeaway:** optimal performance requires balancing I/O capacity, thread count, and data characteristics
 ## Running the Project
 
 ### Prerequisites
