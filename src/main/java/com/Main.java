@@ -10,7 +10,7 @@ import java.util.List;
 
 public class Main {
     private static final String INPUT_FILE_PATH =
-            "pipeline-clean/src/main/resources/input3.txt";
+            "/Users/dishank/Desktop/pipeline-clean/src/main/resources/input3.txt";
 
     private static final int QUEUE_CAPACITY = 50000;
 

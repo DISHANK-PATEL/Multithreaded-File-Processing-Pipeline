@@ -3,6 +3,8 @@ package com.pipeline.stage;
 import com.pipeline.core.MetricsCollector;
 import com.pipeline.model.LogRecord;
 
+import java.security.MessageDigest;
+import java.util.Base64;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -82,6 +84,7 @@ public class DataParserTask implements Runnable {
                 return;
             }
 
+            // heavyCompute(message);
             LogRecord record = parseLine(message);
 
             parserQueue.put(record);
@@ -166,6 +169,17 @@ public class DataParserTask implements Runnable {
                 System.err.printf("[Parser-%s] Interrupted injecting pill %d/%d%n",
                         Thread.currentThread().getName(), i + 1, aggregatorThreadCount);
             }
+        }
+    }
+    
+    private String heavyCompute(String text) {
+        try {
+           
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(text.getBytes());
+            return Base64.getEncoder().encodeToString(hash);
+        } catch (Exception e) {
+            return text;
         }
     }
 }
